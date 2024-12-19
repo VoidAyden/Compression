@@ -4,7 +4,6 @@ from collections import defaultdict
 # LZ77 Compression Algorithm
 def lz77_compress(input_data):
     window_size = 256
-    search_buffer = []
     result = []
     i = 0
     while i < len(input_data):
@@ -18,7 +17,9 @@ def lz77_compress(input_data):
                 break
 
         if match:
-            result.append((match[0], match[1], input_data[i + match[1]]))
+            # Ensure we're not going out of bounds for next_char
+            next_char = input_data[i + match[1]] if i + match[1] < len(input_data) else ""
+            result.append((match[0], match[1], next_char))
             i += match[1] + 1  # Skip the matched portion
         else:
             result.append((0, 0, input_data[i]))
@@ -110,30 +111,33 @@ def read_custom_compressed_file(filename):
 
     return compressed_data, huff_tree
 
-# Decompress data by reversing Huffman and LZ77 steps
-def decompress_data(compressed_data, huff_tree):
-    # Step 1: Huffman decode
-    decompressed_lz77 = huffman_decode(compressed_data, huff_tree)
-
-    # Step 2: LZ77 decompress (function needs to be defined)
-    decompressed_data = lz77_decompress(decompressed_lz77)
-    
-    return decompressed_data
-
 # LZ77 Decompression (opposite of LZ77 compression)
 def lz77_decompress(compressed_data):
     decompressed = []
-    for offset, length, next_char in compressed_data:
+    i = 0
+    while i < len(compressed_data):
+        offset, length, next_char = compressed_data[i]
         if offset == 0 and length == 0:
             decompressed.append(next_char)
         else:
             start = len(decompressed) - offset
             decompressed.extend(decompressed[start:start + length])
             decompressed.append(next_char)
+        i += 1
     return ''.join(decompressed)
 
+# Decompress data by reversing Huffman and LZ77 steps
+def decompress_data(compressed_data, huff_tree):
+    # Step 1: Huffman decode
+    decompressed_lz77 = huffman_decode(compressed_data, huff_tree)
+
+    # Step 2: LZ77 decompress
+    decompressed_data = lz77_decompress(decompressed_lz77)
+    
+    return decompressed_data
+
 # Example usage
-input_data = "this is a simple example input text for compression"*100  # Example large text input
+input_data = "this is a simple example input text for compression" * 100  # Example large text input
 compressed_data, huff_tree = compress_directory_data(input_data)
 
 # Save to file
